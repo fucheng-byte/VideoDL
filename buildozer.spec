@@ -10,7 +10,7 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 1.0
 
 # 需要的 Python 套件
-   requirements = python3,kivy,yt-dlp,certifi,mutagen,websockets
+   requirements = python3==3.11.8,kivy,yt-dlp,certifi,mutagen,websockets
 orientation = portrait
 fullscreen = 0
 
