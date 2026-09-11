@@ -34,10 +34,11 @@ jobs:
       - name: Set JAVA_HOME
         run: echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
-      - name: Build APK with buildozer
+            - name: Build APK with buildozer
         run: |
+          set -o pipefail
           yes | buildozer android debug 2>&1 | tee build_log.txt
-
+          
       - name: Show tail of build log if failed
         if: failure()
         run: tail -n 300 build_log.txt
