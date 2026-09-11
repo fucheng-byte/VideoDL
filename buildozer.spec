@@ -22,6 +22,7 @@ android.api = 33
 android.minapi = 24
 android.ndk = 25b
 android.archs = arm64-v8a
+p4a.branch = v2024.01.21
 
 # 允許存取外部空間（Android 11+ 的 scoped storage 若要寫 /sdcard/Download
 # 需要 MANAGE_EXTERNAL_STORAGE，這裡先用基本權限，必要時再加）
