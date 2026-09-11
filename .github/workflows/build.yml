@@ -38,10 +38,13 @@ jobs:
         run: |
           set -o pipefail
           yes | buildozer android debug 2>&1 | tee build_log.txt
-          
-      - name: Show tail of build log if failed
+
+      - name: Show relevant errors if failed
         if: failure()
-        run: tail -n 300 build_log.txt
+        run: |
+          grep -vE "^.{0,15}#\s+[A-Za-z_0-9]+\s*=" build_log.txt > filtered_log.txt
+          echo "===== 過濾後找到的錯誤附近內容 ====="
+          grep -i -B3 -A3 -E "error:|Error|ERROR|Traceback|ModuleNotFoundError|ImportError|Command failed" filtered_log.txt | tail -n 200
 
       - name: Upload build log (for debugging)
         if: always()
