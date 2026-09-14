@@ -122,37 +122,41 @@ class VideoDLApp(App):
             height=dp(60),
             font_size=dp(16),
             halign="center",
+            color=(0, 0, 0, 1),
         )
         title_label.bind(size=lambda *_: setattr(title_label, "text_size", title_label.size))
         root.add_widget(title_label)
 
         # 網址輸入
-        root.add_widget(Label(text="影片網址：", size_hint_y=None, height=dp(20), halign="left"))
+        root.add_widget(Label(text="影片網址：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
         self.url_input = TextInput(
             hint_text="貼上影片連結...",
             multiline=False,
             size_hint_y=None,
             height=dp(45),
+            foreground_color=(0, 0, 0, 1),
         )
         root.add_widget(self.url_input)
 
         # 儲存路徑
-        root.add_widget(Label(text="儲存位置：", size_hint_y=None, height=dp(20), halign="left"))
+        root.add_widget(Label(text="儲存位置：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
         self.path_input = TextInput(
             text=get_default_save_path(),
             multiline=False,
             size_hint_y=None,
             height=dp(45),
+            foreground_color=(0, 0, 0, 1),
         )
         root.add_widget(self.path_input)
 
         # 解析度選擇
-        root.add_widget(Label(text="選擇畫質：", size_hint_y=None, height=dp(20), halign="left"))
+        root.add_widget(Label(text="選擇畫質：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
         self.res_spinner = Spinner(
             text="最高可用畫質（單一檔案）",
             values=list(RES_OPTIONS.keys()),
             size_hint_y=None,
             height=dp(45),
+            color=(0, 0, 0, 1),
         )
         root.add_widget(self.res_spinner)
 
@@ -168,7 +172,7 @@ class VideoDLApp(App):
         root.add_widget(self.download_btn)
 
         # Log 顯示區
-        root.add_widget(Label(text="狀態訊息：", size_hint_y=None, height=dp(20), halign="left"))
+        root.add_widget(Label(text="狀態訊息：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
         self.log_label = Label(
             text="準備就緒，請輸入網址後按下載。\n(Android 版不支援自動合併高畫質音影軌，"
             "已改用單一完整檔案下載模式)",
@@ -176,6 +180,7 @@ class VideoDLApp(App):
             halign="left",
             valign="top",
             font_size=dp(13),
+            color=(0, 0, 0, 1),
         )
         self.log_label.bind(
             width=lambda *_: setattr(self.log_label, "text_size", (self.log_label.width, None))
@@ -248,3 +253,4 @@ class VideoDLApp(App):
 
 if __name__ == "__main__":
     VideoDLApp().run()
+
