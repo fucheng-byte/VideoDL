@@ -66,12 +66,13 @@ def get_default_save_path():
         return os.getcwd()
 
 
-# 解析度對應（改用單一檔案格式，避免需要 ffmpeg 合併）
+# 解析度對應（明確要求「同時含影像+音訊」的單一格式，避免選到
+# 需要額外合併的分離格式；並加上多層備援，找不到指定畫質時自動降級）
 RES_OPTIONS = {
-    "最高可用畫質（單一檔案）": "best",
-    "1080p 以下": "best[height<=1080]",
-    "720p 以下": "best[height<=720]",
-    "480p 以下": "best[height<=480]",
+    "最高可用畫質（單一檔案）": "best[acodec!=none][vcodec!=none]/best",
+    "1080p 以下": "best[height<=1080][acodec!=none][vcodec!=none]/best[height<=1080]/best",
+    "720p 以下": "best[height<=720][acodec!=none][vcodec!=none]/best[height<=720]/best",
+    "480p 以下": "best[height<=480][acodec!=none][vcodec!=none]/best[height<=480]/best",
 }
 
 
