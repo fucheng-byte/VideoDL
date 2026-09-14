@@ -37,7 +37,7 @@ jobs:
       - name: Build APK with buildozer
         run: |
           set -o pipefail
-          yes | buildozer android debug 2>&1 | tee build_log.txt
+          (yes || true) | buildozer android debug 2>&1 | tee build_log.txt
 
       - name: Show relevant errors if failed
         if: failure()
