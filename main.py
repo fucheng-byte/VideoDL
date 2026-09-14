@@ -22,6 +22,8 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.popup import Popup
+from kivy.uix.filechooser import FileChooserListView
 from kivy.metrics import dp
 
 import yt_dlp
@@ -64,6 +66,22 @@ def get_default_save_path():
     else:
         # 方便在電腦上先測試用
         return os.getcwd()
+
+
+def get_browse_root_path():
+    """瀏覽資料夾時的起始根目錄（盡量從使用者看得懂的公用空間開始瀏覽）"""
+    if ON_ANDROID:
+        try:
+            from android.storage import primary_external_storage_path
+
+            root = primary_external_storage_path()
+            if os.path.isdir(root):
+                return root
+        except Exception:
+            pass
+        return "/storage/emulated/0"
+    else:
+        return os.path.expanduser("~")
 
 
 # 解析度對應（明確要求「同時含影像+音訊」的單一格式，避免選到
@@ -140,14 +158,30 @@ class VideoDLApp(App):
 
         # 儲存路徑
         root.add_widget(Label(text="儲存位置：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
+        path_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(45), spacing=dp(5))
         self.path_input = TextInput(
             text=get_default_save_path(),
             multiline=False,
-            size_hint_y=None,
-            height=dp(45),
+            size_hint_x=0.75,
             foreground_color=(0, 0, 0, 1),
         )
-        root.add_widget(self.path_input)
+        path_row.add_widget(self.path_input)
+        browse_btn = Button(text="瀏覽...", size_hint_x=0.25)
+        browse_btn.bind(on_release=self.open_folder_chooser)
+        path_row.add_widget(browse_btn)
+        root.add_widget(path_row)
+
+        # 提示：自訂資料夾在部分手機上可能因系統權限限制而無法寫入
+        root.add_widget(
+            Label(
+                text="(若自選資料夾下載失敗，請改回預設位置)",
+                size_hint_y=None,
+                height=dp(18),
+                halign="left",
+                font_size=dp(11),
+                color=(0.4, 0.4, 0.4, 1),
+            )
+        )
 
         # 解析度選擇
         root.add_widget(Label(text="選擇畫質：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
@@ -194,6 +228,41 @@ class VideoDLApp(App):
         return root
 
     # ------------------------------------------------------------------
+    def open_folder_chooser(self, instance):
+        content = BoxLayout(orientation="vertical", spacing=dp(5), padding=dp(5))
+
+        chooser = FileChooserListView(
+            path=get_browse_root_path(),
+            dirselect=True,
+            filters=[],
+        )
+        content.add_widget(chooser)
+
+        btn_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(45), spacing=dp(5))
+        select_btn = Button(text="選擇此資料夾")
+        cancel_btn = Button(text="取消")
+        btn_row.add_widget(select_btn)
+        btn_row.add_widget(cancel_btn)
+        content.add_widget(btn_row)
+
+        popup = Popup(title="選擇儲存資料夾", content=content, size_hint=(0.9, 0.9))
+
+        def on_select(*_):
+            # dirselect=True 時，若使用者只是點進資料夾但沒有勾選，
+            # chooser.path 會是目前所在的資料夾路徑，直接採用它最保險。
+            chosen = chooser.selection[0] if chooser.selection else chooser.path
+            if os.path.isdir(chosen):
+                self.path_input.text = chosen
+            popup.dismiss()
+
+        def on_cancel(*_):
+            popup.dismiss()
+
+        select_btn.bind(on_release=on_select)
+        cancel_btn.bind(on_release=on_cancel)
+
+        popup.open()
+
     def log(self, message):
         # yt-dlp 的 callback 可能在背景執行緒，用 Clock 排程回主執行緒更新 UI
         def _update(dt):
@@ -253,4 +322,3 @@ class VideoDLApp(App):
 
 if __name__ == "__main__":
     VideoDLApp().run()
-
