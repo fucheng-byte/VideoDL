@@ -15,6 +15,7 @@ import threading
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.core.text import LabelBase
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -26,11 +27,20 @@ from kivy.metrics import dp
 import yt_dlp
 
 # ----------------------------------------------------------------------
+# 中文字體註冊：Kivy 預設字體(Roboto)不含中文字，會顯示成方塊/亂碼，
+# 這裡改用內附的 Noto Sans TC 字體，並覆蓋掉預設的 "Roboto" 字體名稱，
+# 這樣所有 Label/Button/TextInput 不用逐一設定 font_name 也能正常顯示中文。
+# ----------------------------------------------------------------------
+_FONT_PATH = os.path.join(os.path.dirname(__file__), "NotoSansTC-Regular.otf")
+if os.path.exists(_FONT_PATH):
+    LabelBase.register(name="Roboto", fn_regular=_FONT_PATH)
+
+# ----------------------------------------------------------------------
 # Android 專用：權限與預設下載路徑
 # ----------------------------------------------------------------------
 try:
     from android.permissions import request_permissions, Permission
-    from android.storage import primary_external_storage_path
+    from jnius import autoclass
 
     ON_ANDROID = True
 except ImportError:
@@ -40,7 +50,15 @@ except ImportError:
 def get_default_save_path():
     if ON_ANDROID:
         try:
-            return os.path.join(primary_external_storage_path(), "Download")
+            # 改用「App 專屬的外部儲存空間」，不需要額外的儲存權限即可寫入，
+            # 可避開 Android 11+ 的 scoped storage 權限限制導致下載失敗的問題。
+            # 路徑類似：/storage/emulated/0/Android/data/<package>/files/Download
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            context = PythonActivity.mActivity
+            files_dir = context.getExternalFilesDir(None).getAbsolutePath()
+            path = os.path.join(files_dir, "Download")
+            os.makedirs(path, exist_ok=True)
+            return path
         except Exception:
             return "/sdcard/Download"
     else:
