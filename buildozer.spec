@@ -5,12 +5,13 @@ package.name = videodl
 package.domain = org.friend.videodl
 
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py,png,jpg,kv,atlas,otf
 
 version = 1.0
 
 # 需要的 Python 套件
 requirements = python3,kivy,yt-dlp,certifi,mutagen,websockets
+
 orientation = portrait
 fullscreen = 0
 
