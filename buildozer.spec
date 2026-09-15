@@ -10,7 +10,7 @@ source.include_exts = py,png,jpg,kv,atlas,otf
 version = 1.0
 
 # 需要的 Python 套件
-requirements = python3,kivy,yt-dlp==2026.8.19,certifi,mutagen,websockets,ffmpeg,ffpyplayer_codecs
+requirements = python3,kivy,yt-dlp==2026.8.19,certifi,mutagen,websockets,charset-normalizer==3.5.0,ffmpeg,ffpyplayer_codecs
 
 orientation = portrait
 fullscreen = 0
