@@ -10,7 +10,7 @@ source.include_exts = py,png,jpg,kv,atlas,otf
 version = 1.0
 
 # 需要的 Python 套件
-requirements = python3,kivy,yt-dlp==2026.8.19,certifi,mutagen,websockets
+requirements = python3,kivy,yt-dlp==2026.8.19,certifi,mutagen,websockets,ffmpeg,ffpyplayer_codecs
 
 orientation = portrait
 fullscreen = 0
@@ -23,7 +23,7 @@ android.api = 33
 android.minapi = 24
 android.ndk = 25b
 android.archs = arm64-v8a
-p4a.branch = v2024.01.21
+p4a.branch = v2026.05.09
 
 # 允許存取外部空間（Android 11+ 的 scoped storage 若要寫 /sdcard/Download
 # 需要 MANAGE_EXTERNAL_STORAGE，這裡先用基本權限，必要時再加）
