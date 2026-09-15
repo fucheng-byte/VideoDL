@@ -68,6 +68,27 @@ def get_default_save_path():
         return os.getcwd()
 
 
+def get_ffmpeg_path():
+    """在 Android 上尋找內建的 ffmpeg 執行檔（被包裝成 libffmpegbin.so 放在
+    App 的原生函式庫目錄下，這是繞過 Android 執行檔限制的常見手法）。"""
+    if not ON_ANDROID:
+        return None
+    try:
+        PythonActivity = autoclass("org.kivy.android.PythonActivity")
+        context = PythonActivity.mActivity
+        native_lib_dir = context.getApplicationInfo().nativeLibraryDir
+        ffmpeg_path = os.path.join(native_lib_dir, "libffmpegbin.so")
+        if os.path.exists(ffmpeg_path):
+            try:
+                os.chmod(ffmpeg_path, 0o755)
+            except Exception:
+                pass
+            return ffmpeg_path
+    except Exception:
+        pass
+    return None
+
+
 def get_browse_root_path():
     """瀏覽資料夾時的起始根目錄（盡量從使用者看得懂的公用空間開始瀏覽）"""
     if ON_ANDROID:
@@ -84,13 +105,14 @@ def get_browse_root_path():
         return os.path.expanduser("~")
 
 
-# 解析度對應（明確要求「同時含影像+音訊」的單一格式，避免選到
-# 需要額外合併的分離格式；並加上多層備援，找不到指定畫質時自動降級）
+# 解析度對應（現在有內建 ffmpeg 可以合併影音軌，改用一般的
+# bestvideo+bestaudio 選擇策略，畫質選擇更完整；若合併失敗則自動降級
+# 為單一檔案格式）
 RES_OPTIONS = {
-    "最高可用畫質（單一檔案）": "best[acodec!=none][vcodec!=none]/best",
-    "1080p 以下": "best[height<=1080][acodec!=none][vcodec!=none]/best[height<=1080]/best",
-    "720p 以下": "best[height<=720][acodec!=none][vcodec!=none]/best[height<=720]/best",
-    "480p 以下": "best[height<=480][acodec!=none][vcodec!=none]/best[height<=480]/best",
+    "最高可用畫質（自動合併）": "bestvideo+bestaudio/best",
+    "1080p 以下": "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
+    "720p 以下": "bestvideo[height<=720]+bestaudio/best[height<=720]/best",
+    "480p 以下": "bestvideo[height<=480]+bestaudio/best[height<=480]/best",
 }
 
 
@@ -186,7 +208,7 @@ class VideoDLApp(App):
         # 解析度選擇
         root.add_widget(Label(text="選擇畫質：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
         self.res_spinner = Spinner(
-            text="最高可用畫質（單一檔案）",
+            text="最高可用畫質（自動合併）",
             values=list(RES_OPTIONS.keys()),
             size_hint_y=None,
             height=dp(45),
@@ -208,8 +230,7 @@ class VideoDLApp(App):
         # Log 顯示區
         root.add_widget(Label(text="狀態訊息：", size_hint_y=None, height=dp(20), halign="left", color=(0, 0, 0, 1)))
         self.log_label = Label(
-            text="準備就緒，請輸入網址後按下載。\n(Android 版不支援自動合併高畫質音影軌，"
-            "已改用單一完整檔案下載模式)",
+            text="準備就緒，請輸入網址後按下載。\n(已內建 ffmpeg，支援自動合併高畫質音影軌)",
             size_hint_y=None,
             halign="left",
             valign="top",
@@ -305,6 +326,20 @@ class VideoDLApp(App):
             "logger": MyLogger(self),
             "noplaylist": True,
         }
+
+        # 找內建的 ffmpeg，找得到就設定合併輸出成 mp4；
+        # 找不到（例如舊版APK或桌面測試）就退回不需要合併的格式，避免直接報錯。
+        ffmpeg_path = get_ffmpeg_path()
+        if ffmpeg_path:
+            ydl_opts["ffmpeg_location"] = ffmpeg_path
+            ydl_opts["merge_output_format"] = "mp4"
+            self.log(f"已找到內建 ffmpeg：{ffmpeg_path}")
+        else:
+            # 沒有 ffmpeg 時，把格式規則改成只挑單一完整檔案，避免合併失敗
+            ydl_opts["format"] = ydl_opts["format"].split("+")[0].replace(
+                "bestvideo", "best"
+            ) + "[acodec!=none][vcodec!=none]/best"
+            self.log("警告：未找到內建 ffmpeg，改用單一檔案下載模式")
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
