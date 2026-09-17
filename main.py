@@ -384,7 +384,7 @@ class VideoDLApp(App):
             "format": format_opt,
             "outtmpl": outtmpl,
             "logger": MyLogger(self),
-            "noplaylist": True,
+            "ignoreerrors": True,
         }
 
         # 找內建的 ffmpeg，找得到就設定合併輸出成 mp4；
