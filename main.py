@@ -4,9 +4,10 @@
 基於原本的 tkinter 桌面版改寫而成，供朋友間側載安裝使用。
 
 注意：
-1. Android 上沒有內建 ffmpeg，因此本版本改用「單一完整檔案」的下載策略
-   （不需要合併影音軌），確保在手機上能穩定下載完成。
-2. 需要「儲存空間」權限才能把檔案存到手機的下載資料夾。
+1. 內建 ffmpeg，支援自動合併高畫質音影軌。
+2. 下載完成後會自動把檔案另外複製一份到手機「公用」的 Download 資料夾
+   （透過 MediaStore API，不需要額外的儲存權限），方便在檔案管理員、
+   相簿等一般 App 直接找到；原始檔案仍保留在 App 專屬資料夾中。
 """
 
 import os
@@ -66,6 +67,59 @@ def get_default_save_path():
     else:
         # 方便在電腦上先測試用
         return os.getcwd()
+
+
+def copy_to_public_downloads(file_path):
+    """把下載完成的檔案複製一份到手機「公用」的 Download 資料夾，
+    這樣在檔案管理員、相簿等一般 App 都能直接找到，
+    透過 Android 官方的 MediaStore API 達成，不需要額外的危險權限。"""
+    if not ON_ANDROID:
+        return False
+    try:
+        ContentValues = autoclass("android.content.ContentValues")
+        MediaStoreDownloads = autoclass("android.provider.MediaStore$Downloads")
+        PythonActivity = autoclass("org.kivy.android.PythonActivity")
+
+        context = PythonActivity.mActivity
+        filename = os.path.basename(file_path)
+
+        ext = os.path.splitext(filename)[1].lower()
+        mime_map = {
+            ".mp4": "video/mp4",
+            ".mkv": "video/x-matroska",
+            ".webm": "video/webm",
+            ".m4a": "audio/mp4",
+            ".mp3": "audio/mpeg",
+        }
+        mime_type = mime_map.get(ext, "application/octet-stream")
+
+        values = ContentValues()
+        values.put("_display_name", filename)
+        values.put("mime_type", mime_type)
+        values.put("is_pending", 1)
+
+        resolver = context.getContentResolver()
+        collection_uri = MediaStoreDownloads.EXTERNAL_CONTENT_URI
+        item_uri = resolver.insert(collection_uri, values)
+        if item_uri is None:
+            return False
+
+        out_stream = resolver.openOutputStream(item_uri)
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(1024 * 1024)
+                if not chunk:
+                    break
+                out_stream.write(chunk)
+        out_stream.flush()
+        out_stream.close()
+
+        values2 = ContentValues()
+        values2.put("is_pending", 0)
+        resolver.update(item_uri, values2, None, None)
+        return True
+    except Exception:
+        return False
 
 
 def get_ffmpeg_path():
@@ -341,10 +395,36 @@ class VideoDLApp(App):
             ) + "[acodec!=none][vcodec!=none]/best"
             self.log("警告：未找到內建 ffmpeg，改用單一檔案下載模式")
 
+        # 先記錄下載前資料夾裡已有的檔案，下載完後比對出「新產生」的檔案
+        try:
+            before_files = set(os.listdir(save_path))
+        except Exception:
+            before_files = set()
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
             self.log("下載完成！")
+
+            if ON_ANDROID:
+                try:
+                    after_files = set(os.listdir(save_path))
+                except Exception:
+                    after_files = set()
+                new_files = after_files - before_files
+
+                if new_files:
+                    for fname in new_files:
+                        full_path = os.path.join(save_path, fname)
+                        if os.path.isfile(full_path):
+                            ok = copy_to_public_downloads(full_path)
+                            if ok:
+                                self.log(f"已另外複製到手機公用 Download 資料夾：{fname}")
+                            else:
+                                self.log(f"提醒：複製到公用 Download 資料夾失敗（{fname}），"
+                                          "檔案仍在App專屬資料夾裡")
+                else:
+                    self.log("提醒：未偵測到新產生的檔案，可能下載到子資料夾或檔名重複")
         except Exception as e:
             self.log(f"發生錯誤: {e}")
         finally:
