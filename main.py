@@ -341,7 +341,13 @@ class VideoDLApp(App):
     def log(self, message):
         # yt-dlp 的 callback 可能在背景執行緒，用 Clock 排程回主執行緒更新 UI
         def _update(dt):
-            self.log_label.text += f"\n{message}"
+            new_text = self.log_label.text + f"\n{message}"
+            # 只保留最近 60 行，避免累積過多文字導致單一文字圖塊過高，
+            # 在部分手機的 GPU 上會渲染失敗變成全黑畫面。
+            lines = new_text.split("\n")
+            if len(lines) > 60:
+                lines = lines[-60:]
+            self.log_label.text = "\n".join(lines)
 
         Clock.schedule_once(_update, 0)
 
